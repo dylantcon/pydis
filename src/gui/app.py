@@ -24,25 +24,31 @@ class PyDisApp(tk.Tk):
         """Initialize the application window."""
         super().__init__()
 
-        # Set window properties
+        # set window properties
         self.title("PyDis - Python Bytecode Disassembler")
+
+        # application icon
+        icon_img = tk.PhotoImage(file='./imgs/pydislogo.png')
+        self.iconphoto(True, icon_img)
+
+        # geometry setup
         self.geometry("1200x800")
         self.minsize(800, 600)
 
-        # Initialize core components
+        # initialize core components
         self.disassembler = Disassembler()
         self.executor = Executor()
         self.file_handler = FileHandler()
 
-        # Initialize state variables
+        # initialize state variables
         self.current_file = None
         self.bytecode_generated = False
         self.code_view_visible = True
 
-        # Set up the UI
+        # set up the UI
         self._setup_ui()
 
-        # Set up event bindings
+        # set up event bindings
         self._setup_bindings()
     
     def _setup_ui(self):
@@ -387,6 +393,9 @@ class PyDisApp(tk.Tk):
         # set up for step-by-step execution
         self.executor.execute_step_by_step(code)
         
+        # ensure the bytecode view shows the text tab
+        self.bytecode_view.notebook.select(0)  # select the Bytecode Text tab
+        
         # update status
         self._update_status("Debugging started")
     
@@ -448,47 +457,12 @@ class PyDisApp(tk.Tk):
                 # highlight the line in the code view
                 self.code_view.highlight_line(lineno)
                 
-                # find and highlight corresponding bytecode instructions
-                self._highlight_bytecode_for_line(lineno)
-    
-    def _highlight_bytecode_for_line(self, line_number: int):
-        """
-        Highlight bytecode instructions associated with a Python line number.
-        
-        Args:
-            line_number: Python source code line number
-        """
-        # clear previous highlights
-        self.bytecode_view.clear_highlights()
-        
-        # find all bytecode instructions for this line
-        highlighted = False
-        
-        # check if there are instructions
-        if not hasattr(self.bytecode_view, 'instructions') or not self.bytecode_view.instructions:
-            return
-            
-        # find the first instruction for this line
-        for instr in self.bytecode_view.instructions:
-            if instr.get('starts_line') == line_number:
-                # highlight this instruction
-                self.bytecode_view.highlight_instruction(instr.get('offset'))
-                highlighted = True
-                break
-        
-        # if no exact match, try to find the closest instruction
-        if not highlighted:
-            prev_line = 0
-            best_instr = None
-            
-            for instr in self.bytecode_view.instructions:
-                starts_line = instr.get('starts_line')
-                if starts_line is not None and prev_line < starts_line <= line_number:
-                    prev_line = starts_line
-                    best_instr = instr
-            
-            if best_instr:
-                self.bytecode_view.highlight_instruction(best_instr.get('offset'))
+                # highlight corresponding bytecode instructions
+                # use the new method in BytecodeView
+                self.bytecode_view.highlight_line_number(lineno)
+                
+                # force update to ensure UI changes are visible
+                self.update_idletasks()
     
     def _on_toggle_code(self):
         """Handle toggle code view action."""

@@ -7,6 +7,97 @@ import tkinter.font as tkfont
 from typing import Callable, Optional
 import re
 
+class LineNumbers(tk.Canvas):
+    """A canvas widget to display line numbers with perfect alignment."""
+    
+    def __init__(self, parent, text_widget, *args, **kwargs):
+        tk.Canvas.__init__(self, parent, *args, **kwargs, 
+                         highlightthickness=0, bd=0)
+        self.text_widget = text_widget
+        self.font = None
+        self.highlighted_lines = set()
+        
+        # configure appearance
+        self.configure(bg="#F0F0F0", width=40)
+        
+        # bind text widget events to update line numbers
+        self.text_widget.bind("<<Modified>>", self._on_text_modified)
+        self.text_widget.bind("<Configure>", self._on_text_configure)
+        
+        # intercept scroll events
+        self.bind("<MouseWheel>", self._on_mouse_wheel)
+        self.bind("<Button-4>", self._on_mouse_wheel)
+        self.bind("<Button-5>", self._on_mouse_wheel)
+    
+    def set_font(self, font):
+        """Set the font for line numbers, matching the text widget."""
+        self.font = font
+    
+    def set_highlighted_lines(self, highlighted_lines):
+        """Set the lines to be highlighted."""
+        self.highlighted_lines = highlighted_lines
+        self.redraw()
+    
+    def _on_text_modified(self, event=None):
+        """Handle text modifications."""
+        # mark as unmodified to avoid infinite loop
+        self.text_widget.edit_modified(False)
+        self.redraw()
+    
+    def _on_text_configure(self, event=None):
+        """Handle text widget configuration changes."""
+        self.redraw()
+    
+    def _on_mouse_wheel(self, event):
+        """Redirect mouse wheel events to text widget."""
+        self.text_widget.event_generate("<MouseWheel>", 
+                                     delta=event.delta if hasattr(event, 'delta') else 0,
+                                     x=0, y=0)
+        return "break"
+    
+    def redraw(self):
+        """Redraw the line numbers."""
+        self.delete("all")  # clear existing content
+        
+        # get text content
+        text_content = self.text_widget.get("1.0", "end-1c")
+        num_lines = text_content.count("\n") + 1
+        
+        # calculate text metrics for alignment
+        y_offset = int(self.text_widget.cget("pady"))  # get text widget padding
+        line_height = self.font.metrics("linespace")
+        
+        # get current view of text widget to only draw visible lines
+        first_visible_line = int(self.text_widget.index("@0,0").split('.')[0])
+        last_visible_index = self.text_widget.index("@0,%d" % self.text_widget.winfo_height())
+        last_visible_line = int(last_visible_index.split('.')[0])
+        
+        # draw only visible line numbers
+        for line_num in range(first_visible_line, min(last_visible_line + 1, num_lines + 1)):
+            # get the y coordinate of this line in the text widget
+            y = self.text_widget.dlineinfo("%d.0" % line_num)
+            if y is None:
+                continue
+                
+            y = y[1]  # y coordinate is the second element
+            
+            # choose color based on whether line is highlighted
+            text_color = "#0066CC" if line_num in self.highlighted_lines else "#606060"
+            
+            # right-align line numbers with a fixed width
+            self.create_text(
+                self.winfo_width() - 5,  # align to right edge with 5px padding
+                y,
+                anchor="ne",
+                text=f"{line_num}",
+                font=self.font,
+                fill=text_color
+            )
+            
+        # update the canvas size to match the text widget
+        self.configure(height=self.text_widget.winfo_height())
+
+
 class CodeView(tk.Frame):
     """
     A text editor component with syntax highlighting for Python code.
@@ -33,35 +124,53 @@ class CodeView(tk.Frame):
     
     def _setup_ui(self):
         """Set up the UI components."""
-        # create a frame for the line numbers
-        self.line_frame = tk.Frame(self, width=30, bg="#F0F0F0")
-        self.line_frame.pack(side=tk.LEFT, fill=tk.Y)
+        # configure grid layout for precise control
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_rowconfigure(0, weight=1)
         
-        # create a text widget for line numbers
-        self.line_numbers = tk.Text(self.line_frame, width=4, padx=5, pady=5, 
-                                  bg="#F0F0F0", fg="#606060", 
-                                  highlightthickness=0, bd=0)
-        self.line_numbers.pack(side=tk.LEFT, fill=tk.Y)
-        self.line_numbers.configure(state=tk.DISABLED)
+        # create text widget with vertical scrollbar
+        self.text = tk.Text(self, padx=5, pady=5, wrap=tk.NONE,
+                         undo=True, maxundo=-1)
+        self.text.grid(row=0, column=1, sticky="nsew")
         
-        # create a text widget for code
-        self.text = scrolledtext.ScrolledText(self, padx=5, pady=5, wrap=tk.NONE,
-                                            undo=True, maxundo=-1)
-        self.text.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+        # create vertical scrollbar for the text widget
+        self.text_scrollbar_y = tk.Scrollbar(self, orient=tk.VERTICAL, 
+                                          command=self._on_scroll_y)
+        self.text_scrollbar_y.grid(row=0, column=2, sticky="ns")
         
-        # configure the font - use monospace
-        font = tkfont.Font(family="Courier New", size=10)
-        self.text.configure(font=font)
-        self.line_numbers.configure(font=font)
+        # create horizontal scrollbar for the text widget
+        self.text_scrollbar_x = tk.Scrollbar(self, orient=tk.HORIZONTAL, 
+                                          command=self.text.xview)
+        self.text_scrollbar_x.grid(row=1, column=1, sticky="ew")
+        
+        # configure text widget to use scrollbars
+        self.text.configure(yscrollcommand=self._on_text_scroll,
+                          xscrollcommand=self.text_scrollbar_x.set)
+        
+        # configure font - use monospace
+        self.font = tkfont.Font(family="Courier New", size=10)
+        self.text.configure(font=self.font)
         
         # configure tab size (4 spaces)
-        self.text.configure(tabs=font.measure(' ' * 4))
+        self.text.configure(tabs=self.font.measure(' ' * 4))
         
-        # add a vertical scrollbar
-        self.text_scrollbar = self.text.vbar
+        # create line numbers using canvas
+        self.line_numbers = LineNumbers(self, self.text, bg="#F0F0F0")
+        self.line_numbers.grid(row=0, column=0, sticky="ns")
+        self.line_numbers.set_font(self.font)
+    
+    def _on_scroll_y(self, *args):
+        """Handle vertical scrolling."""
+        self.text.yview(*args)
+        self.line_numbers.redraw()
+    
+    def _on_text_scroll(self, *args):
+        """Handle text scrolling."""
+        # update scrollbar position
+        self.text_scrollbar_y.set(*args)
         
-        # bind the scrollbar to the line numbers
-        self.text_scrollbar.config(command=self._on_text_scroll)
+        # update line numbers
+        self.line_numbers.redraw()
     
     def _setup_tags(self):
         """Set up text tags for syntax highlighting."""
@@ -109,15 +218,8 @@ class CodeView(tk.Frame):
         # syntax highlighting
         self.text.bind("<KeyRelease>", self._on_key_release)
         
-        # update line numbers on text change
-        self.text.bind("<<Modified>>", self._on_text_modified)
-        
-        # update line numbers on window configuration change
+        # update on configure
         self.bind("<Configure>", self._on_configure)
-    
-    def _on_text_scroll(self, *args):
-        """Handle scrolling of text widget to update line numbers."""
-        self.line_numbers.yview(*args)
     
     def _on_key_release(self, event):
         """Apply syntax highlighting on key release."""
@@ -128,52 +230,11 @@ class CodeView(tk.Frame):
             
         # apply syntax highlighting
         self._highlight_syntax()
-        
-        # update line numbers
-        self._update_line_numbers()
-    
-    def _on_text_modified(self, event):
-        """Handle changes to the text widget."""
-        # always update line numbers
-        self._update_line_numbers()
-        
-        # mark as unmodified to avoid infinite loop
-        self.text.edit_modified(False)
-        
-        # apply syntax highlighting
-        self._highlight_syntax()
     
     def _on_configure(self, event):
         """Handle window configuration changes."""
-        # update line numbers when widget is resized
-        self._update_line_numbers()
-    
-    def _update_line_numbers(self):
-        """Update the line numbers in the sidebar."""
-        # get text content
-        text_content = self.text.get("1.0", tk.END)
-        
-        # count the number of lines
-        num_lines = text_content.count("\n") + 1
-        
-        # enable editing of line numbers
-        self.line_numbers.configure(state=tk.NORMAL)
-        
-        # clear current line numbers
-        self.line_numbers.delete("1.0", tk.END)
-        
-        # add new line numbers
-        for i in range(1, num_lines + 1):
-            if i in self.highlighted_lines:
-                self.line_numbers.insert(tk.END, f"{i}\n", "highlight")
-            else:
-                self.line_numbers.insert(tk.END, f"{i}\n")
-        
-        # synchronize with text widget scroll position
-        self.line_numbers.yview_moveto(self.text.yview()[0])
-        
-        # disable editing of line numbers
-        self.line_numbers.configure(state=tk.DISABLED)
+        # redraw line numbers when widget is resized
+        self.line_numbers.redraw()
     
     def _highlight_syntax(self):
         """Apply syntax highlighting to the Python code."""
@@ -224,7 +285,7 @@ class CodeView(tk.Frame):
         self.text.delete("1.0", tk.END)
         self.text.insert(tk.END, content)
         self._highlight_syntax()
-        self._update_line_numbers()
+        self.line_numbers.redraw()
     
     def highlight_line(self, line_number: int, error: bool = False):
         """
@@ -237,6 +298,9 @@ class CodeView(tk.Frame):
         # remove existing highlights
         self.text.tag_remove("error_line", "1.0", tk.END)
         self.text.tag_remove("highlight_line", "1.0", tk.END)
+
+        # reset the highlighted_lines set
+        self.highlighted_lines.clear()
         
         # calculate the start and end positions
         start_pos = f"{line_number}.0"
@@ -250,8 +314,8 @@ class CodeView(tk.Frame):
             self.text.tag_add("highlight_line", start_pos, end_pos)
             self.highlighted_lines.add(line_number)
         
-        # update line numbers
-        self._update_line_numbers()
+        # update line numbers highlighting
+        self.line_numbers.set_highlighted_lines(self.highlighted_lines)
         
         # ensure the line is visible
         self.text.see(start_pos)
@@ -261,4 +325,4 @@ class CodeView(tk.Frame):
         self.text.tag_remove("error_line", "1.0", tk.END)
         self.text.tag_remove("highlight_line", "1.0", tk.END)
         self.highlighted_lines.clear()
-        self._update_line_numbers()
+        self.line_numbers.set_highlighted_lines(self.highlighted_lines)

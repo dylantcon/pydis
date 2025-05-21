@@ -16,9 +16,9 @@ PyDis is a desktop application that allows for the disassembly of Python code (e
 - **I/O Handling**: Capture and display standard output and error streams
 - **Bytecode Export**: Save disassembled bytecode in various formats (text, binary, JSON, markdown report)
 
-## Screenshots
+## Screenshot
 
-_(Screenshots will be added here after implementation)_
+![application](imgs/demo.png)
 
 ## Installation
 
