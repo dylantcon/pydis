@@ -26,6 +26,7 @@ PyDis requires Python 3.8 or higher and uses the Tkinter GUI library which is in
 
 ### Setup
 
+#### Command-Line Launch
 1. Clone this repository:
    ```
    git clone https://github.com/yourusername/pydis.git
@@ -36,6 +37,13 @@ PyDis requires Python 3.8 or higher and uses the Tkinter GUI library which is in
    ```
    python pydis.py
    ```
+
+#### Executable Launch
+1. Download the PyDis application executable [here](./dist/pydis.exe)
+
+2. Place it wherever you prefer
+
+3. Double-click to launch, or via your preferred method
 
 ## Usage
 
