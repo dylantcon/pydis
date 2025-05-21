@@ -146,29 +146,29 @@ class BytecodeView(tk.Frame):
         # remove existing highlights
         self.text_view.tag_remove("highlight", "1.0", tk.END)
         
-        # Ensure offset is an integer for string formatting
+        # ensure offset is an integer for string formatting
         try:
             offset = int(offset)
         except (ValueError, TypeError):
             return
         
-        # Find the instruction in the text
+        # find the instruction in the text
         text_content = self.text_view.get("1.0", tk.END)
         
-        # Look for lines that contain the offset
+        # look for lines that contain the offset
         pattern = r'(?m)^.*?\b' + str(offset) + r'\b.*$'
         match = re.search(pattern, text_content)
         
         if match:
-            # Find the line number where the match was found
+            # find the line number where the match was found
             line_num = text_content.count('\n', 0, match.start()) + 1
             start_pos = f"{line_num}.0"
             end_pos = f"{line_num + 1}.0"
             
-            # Apply highlighting
+            # apply highlighting
             self.text_view.tag_add("highlight", start_pos, end_pos)
             
-            # Make sure the highlighted part is visible
+            # make sure the highlighted part is visible
             self.text_view.see(start_pos)
     
     def _build_line_map(self, bytecode_text: str):
@@ -180,19 +180,19 @@ class BytecodeView(tk.Frame):
         """
         self.line_map = {}
         
-        # Split the bytecode text into lines
+        # split the bytecode text into lines
         lines = bytecode_text.split('\n')
         
-        # Process each line
+        # process each line
         for i, line in enumerate(lines):
-            # Match line number at beginning of line, allowing for spacing variations
-            # Example format: "  90           LOAD_NAME"
+            # match line number at beginning of line, allowing for spacing variations
+            # example format: "  90           LOAD_NAME"
             line_match = re.match(r'^\s*(\d+)\s+', line)
             if line_match:
                 try:
                     line_num = int(line_match.group(1))
                     
-                    # Add to the line map
+                    # add to the line map
                     if line_num not in self.line_map:
                         self.line_map[line_num] = []
                     
@@ -200,7 +200,7 @@ class BytecodeView(tk.Frame):
                 except (ValueError, TypeError):
                     pass
                     
-        # Debug the line map (consider removing in production)
+        # debug the line map (consider removing in production)
         # print(f"Built line map with {len(self.line_map)} line numbers")
         # for k, v in self.line_map.items():
         #     print(f"Line {k}: {v}")
@@ -263,7 +263,7 @@ class BytecodeView(tk.Frame):
         Args:
             offset: Bytecode offset of the instruction to highlight
         """
-        # Convert offset to int to ensure type compatibility
+        # convert offset to int to ensure type compatibility
         try:
             offset = int(offset)
         except (ValueError, TypeError):
@@ -271,7 +271,7 @@ class BytecodeView(tk.Frame):
         
         # find and select the item in the tree
         for item in self.tree.get_children():
-            # Get the offset value from the tree item
+            # get the offset value from the tree item
             item_values = self.tree.item(item, "values")
             if not item_values or len(item_values) < 2:
                 continue
@@ -296,62 +296,62 @@ class BytecodeView(tk.Frame):
         Args:
             line_number: Python source code line number
         """
-        # Convert line_number to int to ensure type compatibility
+        # convert line_number to int to ensure type compatibility
         try:
             line_number = int(line_number)
         except (ValueError, TypeError):
             return
         
-        # Clear previous highlights
+        # clear previous highlights
         self.text_view.tag_remove("highlight", "1.0", tk.END)
         
-        # Ensure we're on the Bytecode Text tab
-        self.notebook.select(0)  # Index 0 is the Bytecode Text tab
+        # ensure we're on the Bytecode Text tab
+        self.notebook.select(0)  # index 0 is the Bytecode Text tab
         
-        # Get all lines that match this Python line number
+        # get all lines that match this Python line number
         highlighted = False
         
-        # Try our line map first - this is the most reliable method
+        # try our line map first - this is the most reliable method
         if line_number in self.line_map:
-            # Highlight each bytecode line for this Python line
+            # highlight each bytecode line for this Python line
             for line_idx in self.line_map[line_number]:
-                # Convert to 1-based indexing for text widget
+                # convert to 1-based indexing for text widget
                 start_pos = f"{line_idx + 1}.0"
                 end_pos = f"{line_idx + 1}.end"
                 
-                # Apply highlighting
+                # apply highlighting
                 self.text_view.tag_add("highlight", start_pos, end_pos)
                 highlighted = True
                 
-                # Ensure the first highlighted line is visible
+                # ensure the first highlighted line is visible
                 if line_idx == self.line_map[line_number][0]:
                     self.text_view.see(start_pos)
         
-        # If line map didn't work, try direct text search
+        # if line map didn't work, try direct text search
         if not highlighted:
             text_content = self.text_view.get("1.0", tk.END)
             lines = text_content.split('\n')
             
-            # Look for lines that start with the line number
-            # This pattern handles the actual format of the bytecode text
+            # look for lines that start with the line number
+            # this pattern handles the actual format of the bytecode text
             pattern = r'^\s*' + str(line_number) + r'\s+'
             
-            # Find and highlight matching lines
+            # find and highlight matching lines
             for i, line in enumerate(lines):
                 if re.match(pattern, line):
                     start_pos = f"{i + 1}.0"
                     end_pos = f"{i + 1}.end"
                     
-                    # Apply highlighting
+                    # apply highlighting
                     self.text_view.tag_add("highlight", start_pos, end_pos)
                     highlighted = True
                     
-                    # Ensure visibility
+                    # ensure visibility
                     self.text_view.see(start_pos)
         
-        # If still no highlighting, try fuzzy match as last resort
+        # if still no highlighting, try fuzzy match as last resort
         if not highlighted:
-            # Find closest matching line number
+            # find closest matching line number
             closest_line = None
             closest_diff = float('inf')
             
@@ -361,7 +361,7 @@ class BytecodeView(tk.Frame):
                     closest_diff = diff
                     closest_line = py_line
             
-            # If we found a close match, use it
+            # if we found a close match, use it
             if closest_line is not None and closest_diff <= 5:  # within 5 lines
                 self.highlight_line_number(closest_line)
     
