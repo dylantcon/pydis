@@ -1,0 +1,9 @@
+# Python version requirement
+python_version >= "3.8"
+
+# All other dependencies are part of the Python standard library:
+# - tkinter (GUI)
+# - dis (bytecode disassembly)
+# - marshal (bytecode serialization)
+# - json (for export features)
+# - etc.
