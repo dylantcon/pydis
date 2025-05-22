@@ -129,6 +129,110 @@ pydis/
 ### Debugger Sequence Diagram
 
 ```mermaid
+sequenceDiagram
+    participant User
+    participant UIThread as UI Thread<br/>(PyDisApp)
+    participant Executor
+    participant ExecThread as Execution Thread<br/>(_run_with_trace)
+    participant Interpreter as Python Interpreter<br/>(PVM)
+    participant TraceFunc as Trace Function<br/>(_trace_function)
+
+    Note over User, TraceFunc: Debug Session Initialization
+
+    User->>+UIThread: Click "Debug" button
+    UIThread->>UIThread: Get source code from editor
+    UIThread->>+Executor: execute_step_by_step(source_code)
+    
+    Executor->>Executor: reset() - Clear previous state
+    Executor->>Executor: _is_running = True
+    
+    Executor->>+ExecThread: Create thread(_run_with_trace, source_code)
+    Note right of ExecThread: Thread created with daemon=True
+    Executor->>ExecThread: start() - Begin execution thread
+    Executor-->>-UIThread: Return (non-blocking)
+    UIThread-->>-User: UI ready for debugging
+
+    Note over ExecThread, TraceFunc: Execution Thread Initialization
+
+    ExecThread->>+Interpreter: sys.settrace(_trace_function)
+    ExecThread->>Interpreter: compile(source_code, '<string>', 'exec')
+    ExecThread->>+Interpreter: exec(compiled_code, globals, locals)
+    
+    Note over Interpreter, TraceFunc: First Line Execution
+
+    Interpreter->>+TraceFunc: Call before first line (frame, 'line', arg)
+    TraceFunc->>TraceFunc: Record execution state
+    TraceFunc->>Executor: _step_event.clear()
+    TraceFunc->>Executor: _step_complete_event.set()
+    Note right of TraceFunc: Signal UI: step complete, state ready
+    
+    TraceFunc->>TraceFunc: _step_event.wait()
+    Note right of TraceFunc: THREAD BLOCKS - waiting for UI signal
+    
+    Note over User, TraceFunc: Step-by-Step Execution Cycle
+
+    loop Each Step Command
+        User->>+UIThread: Click "Step" button
+        UIThread->>+Executor: step()
+        
+        Executor->>Executor: _step_event.set()
+        Note right of Executor: Signal execution thread to proceed
+        
+        Executor->>Executor: _step_complete_event.wait(timeout=1.0)
+        Note right of Executor: UI THREAD BLOCKS - waiting for step completion
+        
+        Note over TraceFunc, Interpreter: Execution Thread Resumes
+        TraceFunc->>TraceFunc: _step_event.wait() unblocks
+        TraceFunc->>TraceFunc: _step_complete_event.clear()
+        TraceFunc-->>Interpreter: return self._trace_function
+        Note right of TraceFunc: Tell interpreter to continue tracing
+        
+        Interpreter->>Interpreter: Execute one line of user code
+        Interpreter->>+TraceFunc: Call before next line (frame, 'line', arg)
+        
+        TraceFunc->>TraceFunc: Record new execution state
+        TraceFunc->>Executor: _step_event.clear()
+        TraceFunc->>Executor: _step_complete_event.set()
+        Note right of TraceFunc: Signal UI: step complete
+        
+        Executor->>Executor: _step_complete_event.wait() unblocks
+        Executor-->>-UIThread: step() returns
+        
+        UIThread->>+UIThread: _update_debug_ui()
+        UIThread->>UIThread: Get execution state from executor
+        UIThread->>UIThread: Update variable inspector
+        UIThread->>UIThread: Update console output
+        UIThread->>UIThread: Highlight current line in code view
+        UIThread->>UIThread: Highlight bytecode instructions
+        UIThread-->>-User: Display updated debug state
+        
+        TraceFunc->>TraceFunc: _step_event.wait()
+        Note right of TraceFunc: THREAD BLOCKS again - waiting for next step
+        
+    end
+
+    Note over User, TraceFunc: Debug Session Termination
+
+    User->>+UIThread: Click "Stop" button
+    UIThread->>+Executor: stop_execution()
+    Executor->>Executor: _should_stop = True
+    Executor->>Executor: _step_event.set()
+    Note right of Executor: Unblock execution thread
+    Executor-->>-UIThread: Return
+    
+    TraceFunc->>TraceFunc: _step_event.wait() unblocks
+    TraceFunc->>TraceFunc: Check _should_stop == True
+    TraceFunc-->>-Interpreter: return None
+    Note right of TraceFunc: Tell interpreter to stop tracing
+    
+    Interpreter->>Interpreter: Disable tracing, continue at normal speed
+    Interpreter-->>-ExecThread: exec() completes
+    ExecThread->>ExecThread: sys.settrace(None) - cleanup
+    ExecThread->>ExecThread: Restore stdout/stderr
+    ExecThread->>Executor: _is_running = False
+    ExecThread-->>-Executor: Thread terminates
+    
+    UIThread-->>-User: Debug session ended
 ```
 
 ## Contributing
