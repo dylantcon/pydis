@@ -24,26 +24,52 @@ PyDis is a desktop application that allows for the disassembly of Python code (e
 
 PyDis requires Python 3.8 or higher and uses the Tkinter GUI library which is included in standard Python distributions.
 
-### Setup
+### Option 1: Download Executable (Recommended for Users)
+
+**[📥 Download PyDis v1.0 - Windows Executable](https://github.com/yourusername/pydis/releases/latest/download/pydis.exe)**
+
+1. Click the download link above
+2. Save the `pydis.exe` file to your desired location
+3. Double-click to launch PyDis
+4. No Python installation required!
+
+*Note: The executable is built for Windows. For other platforms, use the source code installation below.*
+
+### Option 2: Run from Source Code
 
 #### Command-Line Launch
 1. Clone this repository:
-   ```
-   git clone https://github.com/yourusername/pydis.git
-   cd pydis
-   ```
+    ```bash
+    git clone https://github.com/yourusername/pydis.git
+    cd pydis
+    ```
 
 2. Run the application:
-   ```
-   python pydis.py
-   ```
+    ```bash
+    python pydis.py
+    ```
 
-#### Executable Launch
-1. Download the PyDis application executable [here](./dist/pydis.exe)
+#### Building Your Own Executable
+If you want to build the executable yourself:
 
-2. Place it wherever you prefer
+1. Install PyInstaller:
+    ```bash
+    pip install pyinstaller
+    ```
 
-3. Double-click to launch, or via your preferred method
+2. Build the executable:
+    ```bash
+    pyinstaller pydis.spec
+    ```
+
+3. Find the executable in the `dist/` folder
+
+## System Requirements
+
+- **For Executable**: Windows 10 or later (no additional requirements)
+- **For Source**: Python 3.8+ with Tkinter (included in most Python distributions)
+- **Memory**: Minimum 4GB RAM recommended for analyzing large Python files
+- **Storage**: ~50MB for executable, ~10MB for source code
 
 ## Usage
 
@@ -96,12 +122,13 @@ pydis/
 │   │   └── debugger.py      # Step-by-step execution UI
 │   └── utils/               # Utility functions
 │       ├── __init__.py
-│       ├── config.py        # Configuration settings
-│       └── theme.py         # UI theming utilities
-└── tests/                   # Unit tests
-    ├── __init__.py
-    ├── test_disassembler.py
-    └── test_executor.py
+│       └── resources.py        # Resource management
+└
+```
+
+### Debugger Sequence Diagram
+
+```mermaid
 ```
 
 ## Contributing

@@ -15,6 +15,8 @@ from src.gui.bytecode_view import BytecodeView
 from src.gui.toolbar import Toolbar
 from src.gui.debugger import DebuggerPanel
 
+from src.utils import resource_path, resource_exists
+
 class PyDisApp(tk.Tk):
     """
     Main application window for the pydis application.
@@ -26,10 +28,19 @@ class PyDisApp(tk.Tk):
 
         # set window properties
         self.title("PyDis - Python Bytecode Disassembler")
+        icon_relative_path = 'imgs/pydislogo.png'
 
-        # application icon
-        icon_img = tk.PhotoImage(file='./imgs/pydislogo.png')
-        self.iconphoto(True, icon_img)
+        if resource_exists(icon_relative_path):
+            try:
+                # application icon
+                icon_path = resource_path(icon_relative_path)
+                icon_img = tk.PhotoImage(file=icon_path)
+                self.iconphoto(True, icon_img)
+            except Exception as e:
+                # if icon load fails, don't crash
+                print(f"Warning: Could not load application icon: {e}")
+        else:
+            print(f"Warning: Application icon not found at {icon_relative_path}")
 
         # geometry setup
         self.geometry("1200x800")
