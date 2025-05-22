@@ -26,7 +26,7 @@ PyDis requires Python 3.8 or higher and uses the Tkinter GUI library which is in
 
 ### Option 1: Download Executable (Recommended for Users)
 
-**[📥 Download PyDis v1.0 - Windows Executable](https://github.com/yourusername/pydis/releases/latest/download/pydis.exe)**
+**[📥 Download PyDis v1.0 - Windows Executable](https://github.com/dylantcon/pydis/releases/latest/download/pydis.exe)**
 
 1. Click the download link above
 2. Save the `pydis.exe` file to your desired location
