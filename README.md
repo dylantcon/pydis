@@ -69,7 +69,7 @@ If you want to build the executable yourself:
 - **For Executable**: Windows 10 or later (no additional requirements)
 - **For Source**: Python 3.8+ with Tkinter (included in most Python distributions)
 - **Memory**: Minimum 4GB RAM recommended for analyzing large Python files
-- **Storage**: ~50MB for executable, ~10MB for source code
+- **Storage**: ~11MB for executable, +50MB for source
 
 ## Usage
 
